@@ -1,0 +1,38 @@
+services:
+  nso_db:
+    container_name: nso_db
+    image: postgres:alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: not_stack_overflow
+    ports:
+      - 5432:5432
+    volumes:
+      - ./dbdata/:/var/lib/postgres/data
+  nso_client:
+    container_name: nso_client
+    build:
+      context: ./nso_client/
+      dockerfile: ./Dockerfile
+    ports:
+      - 3000:3000
+    command: >
+      sh -c "npm start"
+    restart: on-failure
+  nso_server:
+    depends_on:
+      - nso_db
+    container_name: nso_server
+    build:
+      context: ./nso_server/
+      dockerfile: ./Dockerfile
+    ports:
+      - 4000:4000
+    command: >
+      sh -c "
+        npx --yes sequelize-cli db:migrate
+        npx --yes sequelize-cli db:seed:all
+        npm run dev
+      "
+    restart: on-failure

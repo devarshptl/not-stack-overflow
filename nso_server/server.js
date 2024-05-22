@@ -1,21 +1,17 @@
 const express = require("express");
-const {graphqlHTTP} = require("express-graphql");
+const { createHandler } = require("graphql-http/lib/use/express");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 
-const {sequelize} = require("./models");
+const { sequelize } = require("./models");
 
 require("dotenv").config({
   path: "./dev.env",
 });
 
 // ENV variables
-const {
-  PORT,
-  JWT_KEY,
-  SALT,
-} = process.env;
+const { PORT, JWT_KEY, SALT } = process.env;
 
 // Scheme
 const schema = require("./schema/schema");
@@ -37,12 +33,12 @@ const comparePassword = (pwd, correctPwd) => {
   return bcrypt.compareSync(pwd, correctPwd);
 };
 
-(async function() {
+(async function () {
   const server = express();
   // console.log(hashPassword("sample")); // default password
   // sequelize
   try {
-    await sequelize.authenticate({alter: true});
+    await sequelize.authenticate({ alter: true });
     console.log("Database connection has been established successfully.");
   } catch (e) {
     throw new Error("Database connection failed." + e);
@@ -50,19 +46,22 @@ const comparePassword = (pwd, correctPwd) => {
 
   server.use(cors());
 
-  await server.use("/", graphqlHTTP({
-    schema,
-    graphiql: true,
-    customFormatErrorFn: (err) => {
-      return err;
-    },
-    context: {
-      jwtEncrypt,
-      jwtDecrypt,
-      hashPassword,
-      comparePassword,
-    },
-  }));
+  await server.use(
+    "/",
+    createHandler({
+      schema,
+      graphiql: true,
+      customFormatErrorFn: (err) => {
+        return err;
+      },
+      context: {
+        jwtEncrypt,
+        jwtDecrypt,
+        hashPassword,
+        comparePassword,
+      },
+    }),
+  );
 
   await server.listen(PORT, () => {
     console.log("Server listening at port:" + PORT);
